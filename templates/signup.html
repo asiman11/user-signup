@@ -3,37 +3,23 @@
 {% block body %}
 <div class='jumbotron text-center'>   
     <h1>Sign up</h1></div>
-    <form method="post">
-        <table>
-            <tr>
-                <td><label for="username">Username</label></td>
-                <td>
-                    <input name="username" type="text" value="">
-                    <span class="error"></span>
-                </td>
-            </tr>
-            <tr>
-                <td><label for="password">Password</label></td>
-                <td>
-                    <input name="password" type="password">
-                    <span class="error"></span>
-                </td>
-            </tr>
-            <tr>
-                <td><label for="verify">Verify Password</label></td>
-                <td>
-                    <input name="verify" type="password">
-                    <span class="error"></span>
-                </td>
-            </tr>
-            <tr>
-                <td><label for="email">Email (optional)</label></td>
-                <td>
-                    <input name="email" value="">
-                    <span class="error"></span>
-                </td>
-            </tr>
-        </table>
-        <input type="submit">
-     </form>
+    {% from "includes/_formhelpers.html" import render_field %}
+  <form method="POST" action="">
+    <div class="form-group">
+      {{render_field(form.name, class_="form-control")}}
+    </div>
+    <div class="form-group">
+      {{render_field(form.email, class_="form-control")}}
+    </div>
+    <div class="form-group">
+      {{render_field(form.username, class_="form-control")}}
+    </div>
+    <div class="form-group">
+      {{render_field(form.password, class_="form-control")}}
+    </div>
+    <div class="form-group">
+      {{render_field(form.confirm, class_="form-control")}}
+    </div>
+    <p><input type="submit" class="btn btn-primary" value="Submit"></p>
+  </form>
 {% endblock %}
