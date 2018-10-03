@@ -25,7 +25,7 @@ class RegistrationForm(Form):
         validators.Regexp(r'^[\w.@+-]+$', message='No special characters or spaces'), validators.Length(min=3, max=20)]
         )
     email = StringField('Email Address', [
-        validators.Regexp(r'^[\w.@+-]+$', message='No special characters or spaces'),
+        validators.Regexp(r'(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)', message='No special characters or spaces'),
         validators.Email(message='Please enter a valid email'),
         validators.Length(min=3, max=20)]
         )
