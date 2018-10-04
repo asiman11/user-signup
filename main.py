@@ -36,6 +36,10 @@ class RegistrationForm(Form):
     ])
     confirm = PasswordField('Confirm Password')
 
+class ArticleForm(Form):
+    title = StringField('Title', [validators.required(), validators.Length(min=3, max=25)])
+    body = TextAreaField('Body', [validators.Length(min=30)])
+
 # Articles
 @app.route('/articles')
 def articles():
@@ -111,7 +115,8 @@ def login():
         else:
             error = 'Username not found'
             return render_template('login.html', error=error, title="Login")
-    return render_template('login.html')
+    return render_template('login.html', title="Virtual Lobby")
+
 
 def is_logged_in(f):
     @wraps(f)
@@ -119,7 +124,7 @@ def is_logged_in(f):
         if 'logged_in' in session:
             return f(*args, **kwargs)
         else:
-            flash('Unauthorized, Please login', 'danger')
+            flash('Unauthorized, please login', 'danger')
             return redirect(url_for('login'))
     return wrap
 
@@ -134,36 +139,80 @@ def logout():
 @is_logged_in
 def dashboard():
     # Create cursor
- #   cur = mysql.connection.cursor()
+    cur = mysql.connection.cursor()
 
     # Get articles
-  #  result = cur.execute("SELECT * FROM articles")
+    result = cur.execute("SELECT * FROM articles")
 
-   # articles = cur.fetchall()
+    articles = cur.fetchall()
 
-    #if result > 0:
-    return render_template('dashboard.html', articles=articles)
-    #else:
-     #   msg = 'No Articles Found'
-      #  return render_template('dashboard.html', msg=msg)
+    if result > 0:
+        return render_template('dashboard.html', articles=articles, title="Blogs")
+    else:
+        msg = 'No Articles Found'
+        return render_template('dashboard.html', msg=msg, title="Blogs")
     # Close connection
-    #cur.close()
+    cur.close()
 
-# Article Form Class
+@app.route('/add_article', methods=['GET', 'POST'])
+@is_logged_in
+def add_article():
+    form = ArticleForm(request.form)
+    if request.method == 'POST' and form.validate():
+        title = form.title.data
+        body = form.body.data
+        cur = mysql.connection.cursor()
+        cur.execute("INSERT INTO articles(title, body, author) VALUES(%s, %s, %s)",(title, body, session['username']))
+        mysql.connection.commit()
+        cur.close()
+
+        flash('Blog created', 'success')
+        return redirect(url_for('dashboard'))
+
+    return render_template('add_article.html', form=form)
+
 class ArticleForm(Form):
     title = StringField('Title', [validators.Length(min=1, max=200)])
     body = TextAreaField('Body', [validators.Length(min=30)])
+@app.route('/edit_article/<string:id>', methods=['GET', 'POST'])
+@is_logged_in
+def edit_article(id):
+    cur = mysql.connection.cursor()
+    result = cur.execute("SELECT * FROM articles WHERE id = %s", [id])
+    article = cur.fetchone()
+    cur.close()
+    form = ArticleForm(request.form)
+    form.title.data = article['title']
+    form.body.data = article['body']
+
+    if request.method == 'POST' and form.validate():
+        title = request.form['title']
+        body = request.form['body']
+
+        cur = mysql.connection.cursor()
+        app.logger.info(title)
+        cur.execute ("UPDATE articles SET title=%s, body=%s WHERE id=%s",(title, body, id))
+        mysql.connection.commit()
+        cur.close()
+        flash('Blog updated', 'success')
+        return redirect(url_for('dashboard'))
+    return render_template('edit_article.html', form=form, title="Edit Blog")
+
+
+@app.route('/delete_article/<string:id>', methods=['POST'])
+@is_logged_in
+def delete_article(id):
+    cur = mysql.connection.cursor()
+    cur.execute("DELETE FROM articles WHERE id = %s", [id])
+    mysql.connection.commit()
+    cur.close()
+    flash('Article Deleted', 'success')
+    return redirect(url_for('dashboard'))
+
 
 @app.route('/about')
 def about():
     return render_template('about.html', title="About")
-
-
-@app.route('/contact')
-def contact():
-    return render_template('contact.html', title="Contact")
-
-
 
 if __name__ == '__main__':
     app.secret_key='secret123'
