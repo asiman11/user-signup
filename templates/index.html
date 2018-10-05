@@ -2,10 +2,11 @@
 {% block body %}
 <div class='jumbotron text-center jumbotron-fluid'>   
     <div class="container">
-<h1 class="display-1">Virtual Lobby</h1></div>
-<div class="d-inline-flex p-2 justify-content-center"><p>Welcome to the Virtual Lobby</div></p>
-    <a href="/register" class="btn btn-primary btn-lg">Register</a>
-    <a href="/login" class="btn btn-success btn-lg">Login</a></div>
-
+        <h1 class="display-1">Virtual Lobby</h1></div>
+        <div class="d-inline-flex p-2 justify-content-center"><p>Welcome to the Virtual Lobby</div></p>
+        {% if session.logged_in == NULL %}
+            <a href="/register" class="btn btn-primary btn-lg">Register</a>
+            <a href="/login" class="btn btn-success btn-lg">Login</a></div>
+        {% endif %}
 
 {% endblock %}

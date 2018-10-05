@@ -27,7 +27,7 @@ class RegistrationForm(Form):
     email = StringField('Email Address', [
         validators.Regexp(r'(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)', message='No special characters or spaces'),
         validators.Email(message='Please enter a valid email'),
-        validators.Length(min=3, max=20)]
+        validators.Length(min=3)]
         )
     password = PasswordField('Password', [
         validators.DataRequired(),
@@ -59,9 +59,7 @@ def articles():
 #Single Article
 @app.route('/article/<string:id>/')
 def article(id):
-    # Create cursor
     cur = mysql.connection.cursor()
-    # Get article
     result = cur.execute("SELECT * FROM articles WHERE id = %s", [id])
     article = cur.fetchone()
     return render_template('article.html', article=article)
@@ -138,20 +136,14 @@ def logout():
 @app.route('/dashboard')
 @is_logged_in
 def dashboard():
-    # Create cursor
     cur = mysql.connection.cursor()
-
-    # Get articles
     result = cur.execute("SELECT * FROM articles")
-
     articles = cur.fetchall()
-
     if result > 0:
         return render_template('dashboard.html', articles=articles, title="Blogs")
     else:
-        msg = 'No Articles Found'
+        msg = 'No blogs found'
         return render_template('dashboard.html', msg=msg, title="Blogs")
-    # Close connection
     cur.close()
 
 @app.route('/add_article', methods=['GET', 'POST'])
@@ -165,10 +157,8 @@ def add_article():
         cur.execute("INSERT INTO articles(title, body, author) VALUES(%s, %s, %s)",(title, body, session['username']))
         mysql.connection.commit()
         cur.close()
-
         flash('Blog created', 'success')
         return redirect(url_for('dashboard'))
-
     return render_template('add_article.html', form=form)
 
 class ArticleForm(Form):
@@ -184,11 +174,9 @@ def edit_article(id):
     form = ArticleForm(request.form)
     form.title.data = article['title']
     form.body.data = article['body']
-
     if request.method == 'POST' and form.validate():
         title = request.form['title']
         body = request.form['body']
-
         cur = mysql.connection.cursor()
         app.logger.info(title)
         cur.execute ("UPDATE articles SET title=%s, body=%s WHERE id=%s",(title, body, id))
@@ -206,7 +194,7 @@ def delete_article(id):
     cur.execute("DELETE FROM articles WHERE id = %s", [id])
     mysql.connection.commit()
     cur.close()
-    flash('Article Deleted', 'success')
+    flash('Blog deleted', 'success')
     return redirect(url_for('dashboard'))
 
 
