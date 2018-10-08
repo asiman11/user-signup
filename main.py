@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, flash, redirect, url_for, session, logging
 from flask_mysqldb import MySQL
-from wtforms import Form, validators, StringField, TextAreaField, PasswordField
+from wtforms import Form, validators, StringField, TextAreaField, PasswordField, ValidationError
 from passlib.hash import sha256_crypt
 from functools import wraps
 
@@ -19,6 +19,21 @@ mysql = MySQL(app)
 def index():
     return render_template('index.html', title="Virtual Lobby")
     
+
+#def valid_password(form, field):
+ #    from run import config
+ #   min_pwd_len = int(config['MIN_PWD_LEN'])
+#    max_pwd_len = int(config['MAX_PWD_LEN'])
+#    pass_size = len(field.data)
+#    if pass_size == 0:
+#        raise ValidationError('New password cannot be empty')
+#    if pass_size < min_pwd_len or pass_size > max_pwd_len:
+#        raise ValidationError(
+#            'Password needs to be between {min_pwd_len} and {max_pwd_len} characters long (you entered {char})'.format(
+#                min_pwd_len=min_pwd_len, max_pwd_len=max_pwd_len, char=pass_size)
+#        )
+
+
 class RegistrationForm(Form):
     name = StringField('Name', [validators.required(), validators.Length(min=3, max=25)])
     username = StringField('Username', [
@@ -29,11 +44,15 @@ class RegistrationForm(Form):
         validators.Email(message='Please enter a valid email'),
         validators.Length(min=3)]
         )
-    password = PasswordField('Password', [
-        validators.DataRequired(),
-        validators.EqualTo('confirm', message='Passwords must match'),
-        validators.Regexp(r'^[\w.@+-]+$', message='No special characters or spaces'),
-    ])
+    password = PasswordField('Password', [validators.Length(min=6, max=20, message='Password must be at least 6 characters'),
+            validators.Required(), validators.EqualTo('confirm', message='Passwords must match')])
+
+    #password = PasswordField('Password', [ 
+#        Data.Required(), 
+#        EqualTo('confirm', message='Passwords must match'), 
+#        Regexp(r'^[\w.@+-]+$', message='No special characters or spaces'),
+#        Lenght(min=8, message='Password must be longer than 8 characters')
+#    ])
     confirm = PasswordField('Confirm Password')
 
 class ArticleForm(Form):
@@ -201,6 +220,7 @@ def delete_article(id):
 @app.route('/about')
 def about():
     return render_template('about.html', title="About")
+
 
 if __name__ == '__main__':
     app.secret_key='secret123'
