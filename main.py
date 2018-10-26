@@ -37,6 +37,12 @@ class ArticleForm(Form):
     title = StringField('Title', [validators.required(), validators.Length(min=3, max=25)])
     body = TextAreaField('Body')
 
+class ChangePasswordForm(Form):
+    password = PasswordField('Password')
+    newpassword = PasswordField('Password', [validators.Length(min=6, max=20, message='Password must be at least 6 characters'),
+            validators.Required(), validators.EqualTo('confirm', message='Passwords must match')])
+    confirm = PasswordField('Confirm Password')
+
 # Articles
 @app.route('/articles')
 def articles():
@@ -60,26 +66,56 @@ def article(id):
     result = cur.execute("SELECT * FROM articles WHERE id = %s", [id])
     article = cur.fetchone()
     return render_template('article.html', article=article)
-    
+
+#Author articles    
+@app.route('/author/<string:author>/')
+def author(author): 
+    cur = mysql.connection.cursor()
+    result = cur.execute("SELECT * FROM articles WHERE author = %s", [author])
+    articles = cur.fetchall()
+    if result > 0:
+        return render_template('author.html', articles=articles, title='Blogs')
+    else:
+        msg = 'No blogs for this user'
+        render_template('author.html', msg=msg, title='Blogs')
+
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationForm(request.form)
     if request.method == 'POST' and form.validate():
-        name = form.name.data
-        email = form.email.data
-        username = form.username.data
-        password = sha256_crypt.encrypt(str(form.password.data))
-        # Create cursor
-        cur = mysql.connection.cursor()
-        # Execute query
-        cur.execute("INSERT INTO users(name, email, username, password) VALUES(%s, %s, %s, %s)", (name, email, username, password))
-        # Commit to DB
-        mysql.connection.commit()
-        # Close connection
-        cur.close()
-        flash('Congratulations, you are now registered and can log in', 'success')
-        return redirect(url_for('index'))
-    return render_template('register.html', title="Register", form=form)
+        try: 
+            name = form.name.data
+            email = form.email.data
+            username = form.username.data
+            password = sha256_crypt.encrypt(str(form.password.data))
+            # Create cursor
+            cur = mysql.connection.cursor()
+            # Execute query
+            cur.execute("SELECT * FROM users where username = ?", (username))
+            if cur.fetchone is not None:
+                flash('Username already taken')
+                return render_template('register.html', title="Username Register", form=form)
+            else:
+                cur.execute("INSERT INTO users(name, email, username, password) VALUES(%s, %s, %s, %s)", (name, email, username, password))
+                # Commit to DB
+                mysql.connection.commit()
+                # Close connection
+                cur.close()
+                flash('Congratulations, you are now registered and can log in', 'success')
+                
+        except builtins.TypeError: 
+            cur.rollback()
+        finally:
+            error = 'Username already taken'
+            return render_template('register.html', form=form, error=error)
+    elif request.method =='GET':
+        return render_template('register.html', form=form)
+
+
+            
+ 
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -130,37 +166,55 @@ def logout():
     flash('You are now logged out', 'success')
     return redirect(url_for('login'))
 
-@app.route('/dashboard')
+@app.route('/dashboard', methods=['POST'])
 @is_logged_in
 def dashboard():
-    cur = mysql.connection.cursor()
-    result = cur.execute("SELECT * FROM articles")
-    articles = cur.fetchall()
-    if result > 0:
-        return render_template('dashboard.html', articles=articles, title="Blogs")
-    else:
-        msg = 'No blogs found'
-        return render_template('dashboard.html', msg=msg, title="Blogs")
-    cur.close()
+    if request.method == 'POST':
+        cur = mysql.connection.cursor()
+        result = cur.execute("SELECT * FROM articles")
+        articles = cur.fetchall()
+        if result > 0:
+            return render_template('dashboard.html', articles=articles, title="Blogs")
+        else:
+            msg = 'No blogs found'
+            return render_template('dashboard.html', msg=msg, title="Blogs")
+        cur.close()
+
+@app.route('/changepassword', methods=['GET', 'POST'])
+@is_logged_in
+def change_password():
+    form = ChangePasswordForm(request.form)
+    if request.method == 'POST' and form.validate():
+        password = sha256_crypt.encrypt(str(form.password.data))
+        # Create cursor
+        cur = mysql.connection.cursor()
+        # Execute query
+        cur.execute("INSERT INTO users(password) VALUES(%s)", (password))
+        # Commit to DB
+        mysql.connection.commit()
+        # Close connection
+        cur.close()
+        flash('Password changed', 'success')
+        return redirect(url_for('dashboard'))
+    return render_template('change_password.html', title="Change password", form=form)
 
 @app.route('/add_article', methods=['GET', 'POST'])
 @is_logged_in
 def add_article():
     form = ArticleForm(request.form)
-    if request.method == 'POST' and form.validate():
+    if request.method == 'GET' and form.validate():
         title = form.title.data
         body = form.body.data
         cur = mysql.connection.cursor()
         cur.execute("INSERT INTO articles(title, body, author) VALUES(%s, %s, %s)",(title, body, session['username']))
+        print (">>>> in add article")
         mysql.connection.commit()
         cur.close()
         flash('Blog created', 'success')
-        return redirect(url_for('dashboard'))
-    return render_template('add_article.html', form=form)
+        # return redirect(url_for('dashboard'))
+    elif request.method == 'GET':
+        return render_template('add_article.html', form=form)
 
-class ArticleForm(Form):
-    title = StringField('Title', [validators.Length(min=1, max=200)])
-    body = TextAreaField('Body', [validators.Length(min=30)])
 @app.route('/edit_article/<string:id>', methods=['GET', 'POST'])
 @is_logged_in
 def edit_article(id):
@@ -181,7 +235,7 @@ def edit_article(id):
         cur.close()
         flash('Blog updated', 'success')
         return redirect(url_for('dashboard'))
-    return render_template('edit_article.html', form=form, title="Edit Blog")
+    return render_template('edit_article.html', form=form, title="Blog editor")
 
 
 @app.route('/delete_article/<string:id>', methods=['POST'])
